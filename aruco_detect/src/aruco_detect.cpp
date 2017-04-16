@@ -67,7 +67,6 @@ class FiducialsNode {
     ros::Publisher * vertices_pub;
     ros::Publisher * pose_pub;
 
-    ros::Subscriber caminfo_sub;
     image_transport::ImageTransport it;
     image_transport::Subscriber img_sub;
 
@@ -76,9 +75,6 @@ class FiducialsNode {
 
     double fiducial_len;
 
-    bool haveCamInfo;
-    cv::Mat cameraMatrix;
-    cv::Mat distortionCoeffs;
     int frameNum;
     std::string frameId;
 
@@ -88,7 +84,6 @@ class FiducialsNode {
     cv::Ptr<aruco::Dictionary> dictionary;
 
     void imageCallback(const sensor_msgs::ImageConstPtr &msg);
-    void camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &msg);
     void configCallback(aruco_detect::DetectorParamsConfig &config, uint32_t level);
 
     dynamic_reconfigure::Server<aruco_detect::DetectorParamsConfig> configServer;
@@ -98,109 +93,6 @@ class FiducialsNode {
     FiducialsNode(ros::NodeHandle &nh);
 };
 
-
-/**
-  * @brief Return object points for the system centered in a single marker, given the marker length
-  */
-static void getSingleMarkerObjectPoints(float markerLength, vector<Point3f>& objPoints) {
-
-    CV_Assert(markerLength > 0);
-
-    // set coordinate system in the middle of the marker, with Z pointing out
-    objPoints.push_back(Vec3f(-markerLength / 2.f, markerLength / 2.f, 0));
-    objPoints.push_back(Vec3f( markerLength / 2.f, markerLength / 2.f, 0));
-    objPoints.push_back(Vec3f( markerLength / 2.f,-markerLength / 2.f, 0));
-    objPoints.push_back(Vec3f(-markerLength / 2.f,-markerLength / 2.f, 0));
-}
-
-// Euclidean distance between two points
-static double dist(const cv::Point2f &p1, const cv::Point2f &p2)
-{
-    double x1 = p1.x;
-    double y1 = p1.y;
-    double x2 = p2.x;
-    double y2 = p2.y;
-
-    double dx = x1 - x2;
-    double dy = y1 - y2;
-
-    return sqrt(dx*dx + dy*dy);
-}
-
-// Compute area in image of a fiducial, using Heron's formula
-// to find the area of two triangles
-static double calcFiducialArea(const std::vector<cv::Point2f> &pts)
-{
-    const Point2f &p0 = pts.at(0);
-    const Point2f &p1 = pts.at(1);
-    const Point2f &p2 = pts.at(2);
-    const Point2f &p3 = pts.at(3);
-
-    double a1 = dist(p0, p1);
-    double b1 = dist(p0, p3);
-    double c1 = dist(p1, p3);
-
-    double a2 = dist(p1, p2);
-    double b2 = dist(p2, p3);
-    double c2 = c1;
-
-    double s1 = (a1 + b1 + c1) / 2.0;
-    double s2 = (a2 + b2 + c2) / 2.0;
-
-    a1 = sqrt(s1*(s1-a1)*(s1-b1)*(s1-c1));
-    a2 = sqrt(s2*(s2-a2)*(s2-b2)*(s2-c2));
-    return a1+a2;
-}
-
-// estimate reprojection error
-static double getReprojectionError(const vector<Point3f> &objectPoints,
-                            const vector<Point2f> &imagePoints,
-                            const Mat &cameraMatrix, const Mat  &distCoeffs,
-                            const Vec3d &rvec, const Vec3d &tvec) {
-
-    vector<Point2f> projectedPoints;
-
-    cv::projectPoints(objectPoints, rvec, tvec, cameraMatrix,
-                      distCoeffs, projectedPoints);
-
-    // calculate RMS image error
-    double totalError = 0.0;
-    for (unsigned int i=0; i<objectPoints.size(); i++) {
-        double error = dist(imagePoints[i], projectedPoints[i]);
-        totalError += error*error;
-    }
-    double rerror = totalError/objectPoints.size();
-    return rerror;
-}
-
-void estimatePoseSingleMarkers(const vector<vector<Point2f > >&corners,
-                               float markerLength,
-                               const cv::Mat &cameraMatrix,
-                               const cv::Mat &distCoeffs,
-                               vector<Vec3d>& rvecs, vector<Vec3d>& tvecs,
-                               vector<double>& reprojectionError) {
-
-    CV_Assert(markerLength > 0);
-
-    vector<Point3f> markerObjPoints;
-    getSingleMarkerObjectPoints(markerLength, markerObjPoints);
-    int nMarkers = (int)corners.size();
-    rvecs.reserve(nMarkers);
-    tvecs.reserve(nMarkers);
-    reprojectionError.reserve(nMarkers);
-
-    // for each marker, calculate its pose
-    for (int i = 0; i < nMarkers; i++) {
-
-       cv::solvePnP(markerObjPoints, corners[i], cameraMatrix, distCoeffs,
-                    rvecs[i], tvecs[i]);
-
-       reprojectionError[i] =
-          getReprojectionError(markerObjPoints, corners[i],
-                               cameraMatrix, distCoeffs,
-                               rvecs[i], tvecs[i]);
-    }
-}
 
 void FiducialsNode::configCallback(aruco_detect::DetectorParamsConfig & config, uint32_t level)
 {
@@ -229,26 +121,6 @@ void FiducialsNode::configCallback(aruco_detect::DetectorParamsConfig & config, 
     detectorParams->perspectiveRemoveIgnoredMarginPerCell = config.perspectiveRemoveIgnoredMarginPerCell;
     detectorParams->perspectiveRemovePixelPerCell = config.perspectiveRemovePixelPerCell;
     detectorParams->polygonalApproxAccuracyRate = config.polygonalApproxAccuracyRate;
-}
-
-void FiducialsNode::camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
-{
-    if (haveCamInfo) {
-        return;
-    }
-
-    for (int i=0; i<3; i++) {
-        for (int j=0; j<3; j++) {
-            cameraMatrix.at<double>(i, j) = msg->K[i*3+j];
-        }
-    }
-
-    for (int i=0; i<5; i++) {
-        distortionCoeffs.at<double>(0,i) = msg->D[i];
-    }
-
-    haveCamInfo = true;
-    frameId = msg->header.frame_id;
 }
 
 void FiducialsNode::imageCallback(const sensor_msgs::ImageConstPtr & msg) {
@@ -298,60 +170,7 @@ void FiducialsNode::imageCallback(const sensor_msgs::ImageConstPtr & msg) {
             aruco::drawDetectedMarkers(cv_ptr->image, corners, ids);
         }
 
-        if (!haveCamInfo) {
-            if (frameNum > 5) {
-                ROS_ERROR("No camera intrinsics");
-            }
-            return;
-        }
-
-        vector <double>reprojectionError;
-        estimatePoseSingleMarkers(corners, fiducial_len,
-                                  cameraMatrix, distortionCoeffs,
-                                  rvecs, tvecs,
-                                  reprojectionError);
-
-        for (int i=0; i<ids.size(); i++) {
-            aruco::drawAxis(cv_ptr->image, cameraMatrix, distortionCoeffs,
-                            rvecs[i], tvecs[i], fiducial_len);
-
-            ROS_INFO("Detected id %d T %.2f %.2f %.2f R %.2f %.2f %.2f", ids[i],
-                     tvecs[i][0], tvecs[i][1], tvecs[i][2],
-                     rvecs[i][0], rvecs[i][1], rvecs[i][2]);
-
-            double angle = norm(rvecs[i]);
-            Vec3d axis = rvecs[i] / angle;
-            ROS_INFO("angle %f axis %f %f %f",
-                     angle, axis[0], axis[1], axis[2]);
-
-            fiducial_msgs::FiducialTransform ft;
-            ft.fiducial_id = ids[i];
-
-            ft.transform.translation.x = tvecs[i][0];
-            ft.transform.translation.y = tvecs[i][1];
-            ft.transform.translation.z = tvecs[i][2];
-
-            tf2::Quaternion q;
-            q.setRotation(tf2::Vector3(axis[0], axis[1], axis[2]), angle);
-
-            ft.transform.rotation.w = q.w();
-            ft.transform.rotation.x = q.x();
-            ft.transform.rotation.y = q.y();
-            ft.transform.rotation.z = q.z();
-
-            ft.fiducial_area = calcFiducialArea(corners[i]);
-            ft.image_error = reprojectionError[i];
-
-            // Convert image_error (in pixels) to object_error (in meters)
-            ft.object_error =
-                (reprojectionError[i] / dist(corners[i][0], corners[i][2])) *
-                (norm(tvecs[i]) / fiducial_len);
-
-            fta.transforms.push_back(ft);
-        }
-
 	image_pub.publish(cv_ptr->toImageMsg());
-        pose_pub->publish(fta);
     }
      catch(cv_bridge::Exception & e) {
         ROS_ERROR("cv_bridge exception: %s", e.what());
@@ -364,14 +183,6 @@ void FiducialsNode::imageCallback(const sensor_msgs::ImageConstPtr & msg) {
 FiducialsNode::FiducialsNode(ros::NodeHandle & nh) : it(nh)
 {
     frameNum = 0;
-
-    // Camera intrinsics
-    cameraMatrix = cv::Mat::zeros(3, 3, CV_64F);
-
-    // distortion coefficients
-    distortionCoeffs = cv::Mat::zeros(1, 5, CV_64F);
-
-    haveCamInfo = false;
 
     int dicno;
 
@@ -391,9 +202,6 @@ FiducialsNode::FiducialsNode(ros::NodeHandle & nh) : it(nh)
 
     img_sub = it.subscribe("/camera", 1,
                            &FiducialsNode::imageCallback, this);
-
-    caminfo_sub = nh.subscribe("/camera_info", 1,
-			       &FiducialsNode::camInfoCallback, this);
 
     callbackType = boost::bind(&FiducialsNode::configCallback, this, _1, _2);
     configServer.setCallback(callbackType);
