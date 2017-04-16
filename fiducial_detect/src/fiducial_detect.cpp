@@ -148,14 +148,57 @@ void FiducialsNode::fiducial_cb(int id, int direction, double world_diagonal,
 
     fid.direction = direction;
     fid.fiducial_id = id;
-    fid.x0 = x0;
-    fid.y0 = y0;
-    fid.x1 = x1;
-    fid.y1 = y1;
-    fid.x2 = x2;
-    fid.y2 = y2;
-    fid.x3 = x3;
-    fid.y3 = y3;
+
+    // put verices into consistant order
+    switch(direction) {
+      case 0: 
+        // 0 1 2 3
+        fid.x0 = x0;
+        fid.y0 = y0;
+        fid.x1 = x1;
+        fid.y1 = y1;
+        fid.x2 = x2;
+        fid.y2 = y2;
+        fid.x3 = x3;
+        fid.y3 = y3;
+        break;
+       
+      case 1: 
+        // 3 0 1 2
+        fid.x0 = x3;
+        fid.y0 = y3;
+        fid.x1 = x0;
+        fid.y1 = y0;
+        fid.x2 = x1;
+        fid.y2 = y1;
+        fid.x3 = x2;
+        fid.y3 = y2;
+        break;
+	
+      case 2:
+        // 2 3 0 1
+        fid.x0 = x2;
+        fid.y0 = y2;
+        fid.x1 = x3;
+        fid.y1 = y3;
+        fid.x2 = x0;
+        fid.y2 = y0;
+        fid.x3 = x1;
+        fid.y3 = y1;
+        break;
+      
+      case 3: 
+        // 1 2 3 0
+        fid.x0 = x2;
+        fid.y0 = y2;
+        fid.x1 = x3;
+        fid.y1 = y3;
+        fid.x2 = x0;
+        fid.y2 = y0;
+        fid.x3 = x1;
+        fid.y3 = y1;
+        break;
+    }
 
     fiducialVertexArray.fiducials.push_back(fid);
 
@@ -277,7 +320,7 @@ FiducialsNode::FiducialsNode(ros::NodeHandle &nh) : scale(0.75) {
     nh.param<std::string>("log_file", log_file, "fiducials.log.txt");
 
     nh.param<bool>("publish_images", publish_images, false);
-    nh.param<bool>("estimate_pose", estimate_pose, true);
+    nh.param<bool>("estimate_pose", estimate_pose, false);
 
     nh.param<double>("fiducial_len", fiducial_len, 0.146);
     nh.param<bool>("undistort_points", undistort_points, false);
