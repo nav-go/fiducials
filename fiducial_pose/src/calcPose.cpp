@@ -112,55 +112,14 @@ bool RosRpp::fiducialCallback(fiducial_msgs::Fiducial* msg,
 	 msg->x0, msg->y0, msg->x1, msg->y1,
 	 msg->x2, msg->y2, msg->x3, msg->y3);
   
-  switch(msg->direction) {
-    case 0: 
-      // 0 1 2 3
-      ipts.at<double>(0,0) = msg->x0;
-      ipts.at<double>(1,0) = msg->y0;
-      ipts.at<double>(0,1) = msg->x1;
-      ipts.at<double>(1,1) = msg->y1;
-      ipts.at<double>(0,2) = msg->x2;
-      ipts.at<double>(1,2) = msg->y2;
-      ipts.at<double>(0,3) = msg->x3;
-      ipts.at<double>(1,3) = msg->y3;
-      break;
-       
-    case 1: 
-      // 3 0 1 2
-      ipts.at<double>(0,0) = msg->x3;
-      ipts.at<double>(1,0) = msg->y3;
-      ipts.at<double>(0,1) = msg->x0;
-      ipts.at<double>(1,1) = msg->y0;
-      ipts.at<double>(0,2) = msg->x1;
-      ipts.at<double>(1,2) = msg->y1;
-      ipts.at<double>(0,3) = msg->x2;
-      ipts.at<double>(1,3) = msg->y2;
-        break;
-	
-    case 2:
-      // 2 3 0 1
-      ipts.at<double>(0,0) = msg->x2;
-      ipts.at<double>(1,0) = msg->y2;
-      ipts.at<double>(0,1) = msg->x3;
-      ipts.at<double>(1,1) = msg->y3;
-      ipts.at<double>(0,2) = msg->x0;
-      ipts.at<double>(1,2) = msg->y0;
-      ipts.at<double>(0,3) = msg->x1;
-      ipts.at<double>(1,3) = msg->y1;
-      break;
-      
-    case 3: 
-      // 1 2 3 0
-      ipts.at<double>(0,0) = msg->x1;
-      ipts.at<double>(1,0) = msg->y1;
-      ipts.at<double>(0,1) = msg->x2;
-      ipts.at<double>(1,1) = msg->y2;
-      ipts.at<double>(0,2) = msg->x3;
-      ipts.at<double>(1,2) = msg->y3;
-      ipts.at<double>(0,3) = msg->x0;
-      ipts.at<double>(1,3) = msg->y0;
-      break;
-  }
+  ipts.at<double>(0,0) = msg->x0;
+  ipts.at<double>(1,0) = msg->y0;
+  ipts.at<double>(0,1) = msg->x1;
+  ipts.at<double>(1,1) = msg->y1;
+  ipts.at<double>(0,2) = msg->x2;
+  ipts.at<double>(1,2) = msg->y2;
+  ipts.at<double>(0,3) = msg->x3;
+  ipts.at<double>(1,3) = msg->y3;
 
 #if 0
   // This was an attempt to replace RPP with OpenCV's pose estimation.

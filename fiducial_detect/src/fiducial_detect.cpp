@@ -189,14 +189,14 @@ void FiducialsNode::fiducial_cb(int id, int direction, double world_diagonal,
       
       case 3: 
         // 1 2 3 0
-        fid.x0 = x2;
-        fid.y0 = y2;
-        fid.x1 = x3;
-        fid.y1 = y3;
-        fid.x2 = x0;
-        fid.y2 = y0;
-        fid.x3 = x1;
-        fid.y3 = y1;
+        fid.x0 = x1;
+        fid.y0 = y1;
+        fid.x1 = x2;
+        fid.y1 = y2;
+        fid.x2 = x3;
+        fid.y2 = y3;
+        fid.x3 = x0;
+        fid.y3 = y0;
         break;
     }
 
@@ -320,7 +320,7 @@ FiducialsNode::FiducialsNode(ros::NodeHandle &nh) : scale(0.75) {
     nh.param<std::string>("log_file", log_file, "fiducials.log.txt");
 
     nh.param<bool>("publish_images", publish_images, false);
-    nh.param<bool>("estimate_pose", estimate_pose, false);
+    nh.param<bool>("estimate_pose", estimate_pose, true);
 
     nh.param<double>("fiducial_len", fiducial_len, 0.146);
     nh.param<bool>("undistort_points", undistort_points, false);
