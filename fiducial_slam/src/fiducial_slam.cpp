@@ -50,6 +50,7 @@
 #include "fiducial_msgs/FiducialTransform.h"
 #include "fiducial_msgs/FiducialTransformArray.h"
 
+#include "fiducial_slam/estimate.h"
 #include "fiducial_slam/map.h"
 
 #include <opencv2/highgui.hpp>
@@ -66,14 +67,35 @@ using namespace cv;
 class FiducialSlam {
   private:
     ros::Subscriber ft_sub;
+    ros::Subscriber fv_sub;
+    ros::Subscriber ci_sub;
 
     void transformCallback(const fiducial_msgs::FiducialTransformArray::ConstPtr &msg);
+    void verticesCallback(const fiducial_msgs::FiducialArray::ConstPtr &msg);
+    void camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &msg);
 
   public:
     Map fiducialMap;
+    Estimation estimator;
+
     FiducialSlam(ros::NodeHandle &nh);
 };
 
+
+void FiducialSlam::camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &msg)
+{
+    estimator.camInfoCallback(msg);
+}
+
+void FiducialSlam::verticesCallback(const fiducial_msgs::FiducialArray::ConstPtr& msg)
+{
+    vector<Observation> observations;
+    fiducial_msgs::FiducialTransformArray fta;
+
+    estimator.estimatePose(msg, observations, fta);
+
+    fiducialMap.update(observations, msg->header.stamp);
+}
 
 void FiducialSlam::transformCallback(const fiducial_msgs::FiducialTransformArray::ConstPtr& msg)
 {
@@ -103,11 +125,18 @@ void FiducialSlam::transformCallback(const fiducial_msgs::FiducialTransformArray
     fiducialMap.update(observations, msg->header.stamp);
 }
 
-FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh)
+FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh), estimator(0.14) // TODO: use param
 {
+/*
     ft_sub = nh.subscribe("/fiducial_transforms", 1, 
                           &FiducialSlam::transformCallback, this); 
-    
+*/
+    fv_sub = nh.subscribe("/fiducial_vertices", 1, 
+                          &FiducialSlam::verticesCallback, this); 
+
+    ci_sub = nh.subscribe("/raspicam_node/camera_info", 1, 
+                          &FiducialSlam::camInfoCallback, this); 
+
     ROS_INFO("Fiducial Slam ready");
 }
 
