@@ -214,7 +214,7 @@ bool RosRpp::fiducialCallback(fiducial_msgs::Fiducial* msg,
 
   tf::Transform trans1(m1, t1);
 
-  frameTransforms[msg->fiducial_id] = trans1.inverse();
+  frameTransforms[msg->fiducial_id] = trans1; //.inverse();
   t1 = trans1.getOrigin();
   m1 = trans1.getBasis();
 
@@ -311,17 +311,17 @@ RosRpp::RosRpp(double fiducialLen, bool doUndistort)
     Fiducial with origin at center:
   */
 
-  model.at<double>(0,0) =  fiducialLen / 2.0;
-  model.at<double>(1,0) = -fiducialLen / 2.0;
+  model.at<double>(0,0) = -fiducialLen / 2.0;
+  model.at<double>(1,0) =  fiducialLen / 2.0;
   
-  model.at<double>(0,1) = -fiducialLen / 2.0;
-  model.at<double>(1,1) = -fiducialLen / 2.0;
+  model.at<double>(0,1) =  fiducialLen / 2.0;
+  model.at<double>(1,1) =  fiducialLen / 2.0;
 
-  model.at<double>(0,2) = -fiducialLen / 2.0;
-  model.at<double>(1,2) =  fiducialLen / 2.0;
+  model.at<double>(0,2) =  fiducialLen / 2.0;
+  model.at<double>(1,2) = -fiducialLen / 2.0;
 
-  model.at<double>(0,3) =  fiducialLen / 2.0;
-  model.at<double>(1,3) =  fiducialLen / 2.0;
+  model.at<double>(0,3) = -fiducialLen / 2.0;
+  model.at<double>(1,3) = -fiducialLen / 2.0;
 
   currentFrame = 0;
 } 

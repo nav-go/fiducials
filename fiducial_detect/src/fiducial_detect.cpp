@@ -149,34 +149,12 @@ void FiducialsNode::fiducial_cb(int id, int direction, double world_diagonal,
     fid.direction = direction;
     fid.fiducial_id = id;
 
-    // put verices into consistant order
+    /*
+       put verices into consistent order with zero in the top left
+    */ 
     switch(direction) {
       case 0: 
         // 0 1 2 3
-        fid.x0 = x0;
-        fid.y0 = y0;
-        fid.x1 = x1;
-        fid.y1 = y1;
-        fid.x2 = x2;
-        fid.y2 = y2;
-        fid.x3 = x3;
-        fid.y3 = y3;
-        break;
-       
-      case 1: 
-        // 3 0 1 2
-        fid.x0 = x3;
-        fid.y0 = y3;
-        fid.x1 = x0;
-        fid.y1 = y0;
-        fid.x2 = x1;
-        fid.y2 = y1;
-        fid.x3 = x2;
-        fid.y3 = y2;
-        break;
-	
-      case 2:
-        // 2 3 0 1
         fid.x0 = x2;
         fid.y0 = y2;
         fid.x1 = x3;
@@ -186,9 +164,9 @@ void FiducialsNode::fiducial_cb(int id, int direction, double world_diagonal,
         fid.x3 = x1;
         fid.y3 = y1;
         break;
-      
-      case 3: 
-        // 1 2 3 0
+       
+      case 1: 
+        // 3 0 1 2
         fid.x0 = x1;
         fid.y0 = y1;
         fid.x1 = x2;
@@ -197,6 +175,30 @@ void FiducialsNode::fiducial_cb(int id, int direction, double world_diagonal,
         fid.y2 = y3;
         fid.x3 = x0;
         fid.y3 = y0;
+        break;
+	
+      case 2:
+        // 2 3 0 1
+        fid.x0 = x0;
+        fid.y0 = y0;
+        fid.x1 = x1;
+        fid.y1 = y1;
+        fid.x2 = x2;
+        fid.y2 = y2;
+        fid.x3 = x3;
+        fid.y3 = y3;
+        break;
+      
+      case 3: 
+        // 1 2 3 0
+        fid.x0 = x3;
+        fid.y0 = y3;
+        fid.x1 = x0;
+        fid.y1 = y0;
+        fid.x2 = x1;
+        fid.y2 = y1;
+        fid.x3 = x2;
+        fid.y3 = y2;
         break;
     }
 
@@ -280,7 +282,9 @@ void FiducialsNode::processImage(const sensor_msgs::ImageConstPtr &msg) {
         Fiducials__image_set(fiducials, image);
         Fiducials_Results results = Fiducials__process(fiducials);
 
-        pose_pub.publish(fiducialTransformArray);
+        if (estimate_pose) {
+            pose_pub.publish(fiducialTransformArray);
+        }
         vertices_pub.publish(fiducialVertexArray);
  
         ROS_INFO("Processed image");
@@ -320,7 +324,7 @@ FiducialsNode::FiducialsNode(ros::NodeHandle &nh) : scale(0.75) {
     nh.param<std::string>("log_file", log_file, "fiducials.log.txt");
 
     nh.param<bool>("publish_images", publish_images, false);
-    nh.param<bool>("estimate_pose", estimate_pose, true);
+    nh.param<bool>("estimate_pose", estimate_pose, false);
 
     nh.param<double>("fiducial_len", fiducial_len, 0.146);
     nh.param<bool>("undistort_points", undistort_points, false);
