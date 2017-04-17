@@ -3,10 +3,11 @@
 
   <node pkg="fiducial_detect" name="fiducial_detect" type="fiducial_detect">
     <param name="image_transport" value="raw" />
-    <param name="fiducial_len" value="0.156"/>
-    <param name="undistort_points" value="false"/>
-    <param name="estimate_pose" value="true"/>
     <remap from="/camera" to="/camera/image"/>
+  </node>
+
+  <node pkg="fiducial_slam" name="fiducial_slam" type="fiducial_slam">
+    <param name="fiducial_len" value="0.156"/>
   </node>
 
   <test test-name="fiducial_transform_test" pkg="fiducial_detect" type="fiducial_transform_test">
