@@ -120,11 +120,9 @@ void Estimation::estimatePoseSingleMarker(const vector<Point2f> &corners,
 }
 
 
-Estimation::Estimation(double fiducialLen)
+Estimation::Estimation()
 {
     haveCaminfo = false;
-
-    this->fiducialLen = fiducialLen;
 
     // Camera intrinsics
     cameraMatrix = cv::Mat::zeros(3, 3, CV_64F);

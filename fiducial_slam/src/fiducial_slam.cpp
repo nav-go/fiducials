@@ -70,6 +70,8 @@ class FiducialSlam {
     ros::Subscriber fv_sub;
     ros::Subscriber ci_sub;
 
+    ros::Publisher ft_pub;
+
     void transformCallback(const fiducial_msgs::FiducialTransformArray::ConstPtr &msg);
     void verticesCallback(const fiducial_msgs::FiducialArray::ConstPtr &msg);
     void camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr &msg);
@@ -95,6 +97,7 @@ void FiducialSlam::verticesCallback(const fiducial_msgs::FiducialArray::ConstPtr
     estimator.estimatePose(msg, observations, fta);
 
     fiducialMap.update(observations, msg->header.stamp);
+    ft_pub.publish(fta);
 }
 
 void FiducialSlam::transformCallback(const fiducial_msgs::FiducialTransformArray::ConstPtr& msg)
@@ -125,7 +128,7 @@ void FiducialSlam::transformCallback(const fiducial_msgs::FiducialTransformArray
     fiducialMap.update(observations, msg->header.stamp);
 }
 
-FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh), estimator(0.14) // TODO: use param
+FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh)
 {
 /*
     ft_sub = nh.subscribe("/fiducial_transforms", 1, 
@@ -134,8 +137,14 @@ FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh), estimator(0.1
     fv_sub = nh.subscribe("/fiducial_vertices", 1, 
                           &FiducialSlam::verticesCallback, this); 
 
-    ci_sub = nh.subscribe("/raspicam_node/camera_info", 1, 
+    ci_sub = nh.subscribe("/camera_info", 1, 
                           &FiducialSlam::camInfoCallback, this); 
+
+    ft_pub = ros::Publisher(nh.advertise<fiducial_msgs::FiducialTransformArray>("/fiducial_transforms", 1));
+
+    double fiducialLen;
+    nh.param<double>("fiducial_len", fiducialLen, 0.14);
+    estimator.setFiducialLen(fiducialLen);
 
     ROS_INFO("Fiducial Slam ready");
 }

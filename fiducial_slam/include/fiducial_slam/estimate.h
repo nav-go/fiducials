@@ -71,13 +71,15 @@ class Estimation {
                                 const Vec3d &rvec, const Vec3d &tvec);
 
   public:
-    Estimation(double fiducialLen);
+    Estimation();
 
     void camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg);
 
     void estimatePose(const fiducial_msgs::FiducialArray::ConstPtr& msg, 
                       vector<Observation> &observations,
                       fiducial_msgs::FiducialTransformArray &outMsg);
+
+    void setFiducialLen(double fiducialLen) { this->fiducialLen = fiducialLen; };
 };
 
 #endif
