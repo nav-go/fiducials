@@ -94,7 +94,7 @@ void FiducialSlam::verticesCallback(const fiducial_msgs::FiducialArray::ConstPtr
     vector<Observation> observations;
     fiducial_msgs::FiducialTransformArray fta;
 
-    estimator.estimatePose(msg, observations, fta);
+    estimator.estimatePoses(msg, observations, fta);
 
     fiducialMap.update(observations, msg->header.stamp);
     ft_pub.publish(fta);
@@ -128,7 +128,7 @@ void FiducialSlam::transformCallback(const fiducial_msgs::FiducialTransformArray
     fiducialMap.update(observations, msg->header.stamp);
 }
 
-FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh)
+FiducialSlam::FiducialSlam(ros::NodeHandle &nh) : fiducialMap(nh), estimator(fiducialMap)
 {
 /*
     ft_sub = nh.subscribe("/fiducial_transforms", 1, 

@@ -56,28 +56,32 @@ class Estimation {
     cv::Mat cameraMatrix;
     cv::Mat distortionCoeffs;
 
+    Map &map;
+
     bool haveCaminfo;
 
     double fiducialLen;
-    
+
     int frameNum;
     string frameId;
 
-    void estimatePoseSingleMarker(const vector<Point2f> &corners,
-                                  Vec3d &rvec, Vec3d &tvec, double &reprojectionError);
+    void estimatePose(int fid, const vector<Point3f> &worldPoints,
+                      const vector<Point2f> &imagePoints,
+                      Observation &obs, fiducial_msgs::FiducialTransform &ft,
+                      const ros::Time& stamp, const string& frame);
 
     double getReprojectionError(const vector<Point3f> &objectPoints,
                                 const vector<Point2f> &imagePoints,
                                 const Vec3d &rvec, const Vec3d &tvec);
 
   public:
-    Estimation();
+    Estimation(Map &fiducialMap);
 
     void camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg);
 
-    void estimatePose(const fiducial_msgs::FiducialArray::ConstPtr& msg, 
-                      vector<Observation> &observations,
-                      fiducial_msgs::FiducialTransformArray &outMsg);
+    void estimatePoses(const fiducial_msgs::FiducialArray::ConstPtr& msg,
+                       vector<Observation> &observations,
+                       fiducial_msgs::FiducialTransformArray &outMsg);
 
     void setFiducialLen(double fiducialLen) { this->fiducialLen = fiducialLen; };
 };

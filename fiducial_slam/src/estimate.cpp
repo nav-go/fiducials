@@ -107,20 +107,60 @@ double Estimation::getReprojectionError(const vector<Point3f> &objectPoints,
 }
 
 
-void Estimation::estimatePoseSingleMarker(const vector<Point2f> &corners, 
-       Vec3d &rvec, Vec3d &tvec, double &reprojectionError)
+void Estimation::estimatePose(int fid, const vector<Point3f> &worldPoints,
+                              const vector<Point2f> &imagePoints,
+                              Observation &obs, fiducial_msgs::FiducialTransform &ft,
+                              const ros::Time& stamp, const string& frame)
+
 {
-    vector<Point3f> markerObjPoints;
-    getSingleMarkerObjectPoints(fiducialLen, markerObjPoints);
+    Vec3d rvec, tvec;
 
-    cv::solvePnP(markerObjPoints, corners, cameraMatrix, distortionCoeffs, rvec, tvec);
+    cv::solvePnP(worldPoints, imagePoints, cameraMatrix, distortionCoeffs, rvec, tvec);
 
-    reprojectionError =
-          getReprojectionError(markerObjPoints, corners, rvec, tvec);
+    double reprojectionError =
+          getReprojectionError(worldPoints, imagePoints, rvec, tvec);
+
+    ROS_INFO("Detected id %d T %.2f %.2f %.2f R %.2f %.2f %.2f", fid,
+              tvec[0], tvec[1], tvec[2], rvec[0], rvec[1], rvec[2]);
+
+    double angle = norm(rvec);
+    Vec3d axis = rvec / angle;
+    ROS_INFO("angle %f axis %f %f %f", angle, axis[0], axis[1], axis[2]);
+
+    tf2::Quaternion q;
+    q.setRotation(tf2::Vector3(axis[0], axis[1], axis[2]), angle);
+
+    // Convert image_error (in pixels) to object_error (in meters)
+        double objectError =
+            (reprojectionError / dist(imagePoints[0], imagePoints[2])) *
+            (norm(tvec) / fiducialLen);
+
+    tf2::Transform T(q, tf2::Vector3(tvec[0], tvec[1], tvec[2]));
+
+    obs = Observation(fid,
+                      tf2::Stamped<TransformWithVariance>(TransformWithVariance(
+                      T, objectError), stamp, frame),
+                      reprojectionError,
+                      objectError);
+
+    ft.fiducial_id = fid;
+
+    ft.transform.translation.x = tvec[0];
+    ft.transform.translation.y = tvec[1];
+    ft.transform.translation.z = tvec[2];
+
+    ft.transform.rotation.w = q.w();
+    ft.transform.rotation.x = q.x();
+    ft.transform.rotation.y = q.y();
+    ft.transform.rotation.z = q.z();
+
+    ft.fiducial_area = calcFiducialArea(imagePoints);
+    ft.image_error = reprojectionError;
+    ft.object_error = objectError;
 }
 
 
-Estimation::Estimation()
+Estimation::Estimation(Map &fiducialMap): map(fiducialMap)
 {
     haveCaminfo = false;
 
@@ -153,8 +193,8 @@ void Estimation::camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
 }
 
 
-void Estimation::estimatePose(const fiducial_msgs::FiducialArray::ConstPtr& msg, 
-                              vector<Observation> &observations, 
+void Estimation::estimatePoses(const fiducial_msgs::FiducialArray::ConstPtr& msg,
+                              vector<Observation> &observations,
                               fiducial_msgs::FiducialTransformArray &outMsg)
 {
     if (!haveCaminfo) {
@@ -163,6 +203,12 @@ void Estimation::estimatePose(const fiducial_msgs::FiducialArray::ConstPtr& msg,
         }
         return;
     }
+
+    vector<Point3f> markerObjPoints;
+    getSingleMarkerObjectPoints(fiducialLen, markerObjPoints);
+
+    vector<Point3f> allWorldPoints;
+    vector<Point2f> allImagePoints;
 
     for (int i=0; i<msg->fiducials.size(); i++) {
 
@@ -177,54 +223,43 @@ void Estimation::estimatePose(const fiducial_msgs::FiducialArray::ConstPtr& msg,
         Vec3d rvec, tvec;
         double reprojectionError;
 
-        estimatePoseSingleMarker(corners, rvec, tvec, reprojectionError);
+        if (map.fiducials.find(fid.fiducial_id) != map.fiducials.end()) {
+            const tf2::Transform&  fiducialTransform =
+                map.fiducials[fid.fiducial_id].pose.transform;
+
+            for (int j=0; j<4; j++) {
+                // vertex in coordinate system of fiducial
+                Point3f& vertex = markerObjPoints[j];
+                tf2::Vector3 vertex2(vertex.x, vertex.y, vertex.z);
+                // vertex in world coordinates
+                tf2::Vector3 worldPoint = fiducialTransform * vertex2;
+                allWorldPoints.push_back(Point3f(worldPoint.x(), worldPoint.y(), worldPoint.z()));
+                allImagePoints.push_back(corners[j]);
+            }
+        }
+
+        Observation obs;
+        fiducial_msgs::FiducialTransform ft;
+        estimatePose(fid.fiducial_id, markerObjPoints, corners, obs, ft,
+           msg->header.stamp, frameId);
+
+        observations.push_back(obs);
+        outMsg.transforms.push_back(ft);
 
 /*
         aruco::drawAxis(cv_ptr->image, cameraMatrix, distortionCoeffs,
                         rvecs, tvecs, fiducialLen);
 */
+    }
 
-        ROS_INFO("Detected id %d T %.2f %.2f %.2f R %.2f %.2f %.2f", fid.fiducial_id,
-                 tvec[0], tvec[1], tvec[2], rvec[0], rvec[1], rvec[2]);
+    if (allWorldPoints.size() > 0) {
+        Observation obs;
+        fiducial_msgs::FiducialTransform ft;
 
-        double angle = norm(rvec);
-        Vec3d axis = rvec / angle;
-        ROS_INFO("angle %f axis %f %f %f", angle, axis[0], axis[1], axis[2]);
-
-        tf2::Quaternion q;
-        q.setRotation(tf2::Vector3(axis[0], axis[1], axis[2]), angle);
-
-        // Convert image_error (in pixels) to object_error (in meters)
-        double objectError =
-            (reprojectionError / dist(corners[0], corners[2])) *
-            (norm(tvec) / fiducialLen);
-
-        tf2::Transform T(q, tf2::Vector3(tvec[0], tvec[1], tvec[2]));
-
-        Observation obs(fid.fiducial_id,
-                        tf2::Stamped<TransformWithVariance>(TransformWithVariance(
-                                T, objectError), msg->header.stamp, frameId),
-                        reprojectionError,
-                        objectError);
+        estimatePose(0, allWorldPoints, allImagePoints, obs, ft,
+           msg->header.stamp, frameId);
 
         observations.push_back(obs);
-
-        fiducial_msgs::FiducialTransform ft;
-        ft.fiducial_id = fid.fiducial_id;
-
-        ft.transform.translation.x = tvec[0];
-        ft.transform.translation.y = tvec[1];
-        ft.transform.translation.z = tvec[2];
-
-        ft.transform.rotation.w = q.w();
-        ft.transform.rotation.x = q.x();
-        ft.transform.rotation.y = q.y();
-        ft.transform.rotation.z = q.z();
-
-        ft.fiducial_area = calcFiducialArea(corners);
-        ft.image_error = reprojectionError;
-        ft.object_error = objectError;
-
         outMsg.transforms.push_back(ft);
     }
 }

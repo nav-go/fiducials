@@ -154,6 +154,9 @@ class Observation {
     tf2::Vector3 position;
     double poseError;
 
+    Observation() {};
+
+    //XXX do we still need ierr and oerr?
     Observation(int fid, const tf2::Stamped<TransformWithVariance>& camFid,
                 double ierr, double oerr);
 };
@@ -192,7 +195,9 @@ class Map {
     string odomFrame;
     string cameraFrame;
     string baseFrame;
+
     double future_date_transforms;
+    double multiErrorThreshold;
 
     bool isInitializingMap;
     int frameNum;

@@ -184,6 +184,10 @@ Map::Map(ros::NodeHandle &nh) : tfBuffer(ros::Duration(30.0)){
 
     nh.param<double>("future_date_transforms", future_date_transforms, 0.1);
 
+    // threshold of object error for using multi-fidicial pose
+    // set -ve to never use
+    nh.param<double>("multi_error_theshold", multiErrorThreshold, 0.01);
+
 
     nh.param<std::string>("map_file", mapFilename,
         string(getenv("HOME")) + "/.ros/slam/map.txt");
@@ -246,6 +250,9 @@ void Map::updateMap(const vector<Observation>& obs, const ros::Time &time,
 
     for (int i=0; i<obs.size(); i++) {
         const Observation &o = obs[i];
+        if (o.fid == 0) {
+            continue;
+        }
 
         // This should take into account the variances from both
         tf2::Stamped<TransformWithVariance> T_mapFid = cameraPose * o.T_camFid;
@@ -311,12 +318,26 @@ bool Map::lookupTransform(const std::string &from, const std::string &to,
 int Map::updatePose(vector<Observation>& obs, const ros::Time &time,
                     tf2::Stamped<TransformWithVariance>& cameraPose)
 {
-    double variance = 0.0;
     int numEsts = 0;
+
+    tf2::Stamped<TransformWithVariance> multiPose;
+    bool useMulti = false;
 
     for (int i=0; i<obs.size(); i++) {
         Observation &o = obs[i];
-        if (fiducials.find(o.fid) != fiducials.end()) {
+        if (o.fid == 0) {
+            // virtual fiducial 0 is at the origin
+            multiPose = o.T_fidCam;
+
+            tf2::Vector3 t = multiPose.transform.getOrigin();
+            ROS_INFO("Pose MUL %lf %lf %lf %lf",
+              t.x(), t.y(), t.z(), multiPose.variance);
+
+            if (multiPose.variance < multiErrorThreshold) {
+                useMulti = true;
+            }
+        }
+        else if (fiducials.find(o.fid) != fiducials.end()) {
             const Fiducial &fid = fiducials[o.fid];
 
             tf2::Stamped<TransformWithVariance> p = fid.pose * o.T_fidCam;
@@ -324,7 +345,7 @@ int Map::updatePose(vector<Observation>& obs, const ros::Time &time,
             p.stamp_ = o.T_fidCam.stamp_;
 
             o.position = p.transform.getOrigin();
-            ROS_INFO("Pose %d %lf %lf %lf %lf", o.fid,
+            ROS_INFO("Pose %3d %lf %lf %lf %lf", o.fid,
               o.position.x(), o.position.y(), o.position.z(), p.variance);
 
             //drawLine(fid.pose.getOrigin(), o.position);
@@ -346,6 +367,13 @@ int Map::updatePose(vector<Observation>& obs, const ros::Time &time,
         }
     }
 
+    if (useMulti) {
+        // XXX this could be neater - maybe override assignment operator
+        cameraPose = multiPose;
+        cameraPose.variance = multiPose.variance;
+        cameraPose.stamp_ = multiPose.stamp_;
+    }
+
     if (numEsts == 0) {
         ROS_INFO("Finished frame - no estimates\n");
         return numEsts;
@@ -356,7 +384,7 @@ int Map::updatePose(vector<Observation>& obs, const ros::Time &time,
         tf2::Vector3 trans = cameraPose.transform.getOrigin();
         tf2::Quaternion q = cameraPose.transform.getRotation();
         ROS_INFO("Pose all %lf %lf %lf %f",
-                 trans.x(), trans.y(), trans.z(), variance);
+                 trans.x(), trans.y(), trans.z(), cameraPose.variance);
     }
 
     // Determine transform from camera to robot
@@ -370,12 +398,12 @@ int Map::updatePose(vector<Observation>& obs, const ros::Time &time,
         // New scope for logging vars
         {
             tf2::Vector3 c = cameraPose.transform.getOrigin();
-            ROS_INFO("camera   %lf %lf %lf %f",
-                     c.x(), c.y(), c.z(), variance);
+            ROS_INFO("camera   %lf %lf %lf",
+                     c.x(), c.y(), c.z());
 
             tf2::Vector3 trans = basePose.transform.getOrigin();
-            ROS_INFO("Pose b_l %lf %lf %lf %f",
-                     trans.x(), trans.y(), trans.z(), variance);
+            ROS_INFO("Pose b_l %lf %lf %lf",
+                     trans.x(), trans.y(), trans.z());
         }
      }
 
@@ -393,8 +421,8 @@ int Map::updatePose(vector<Observation>& obs, const ros::Time &time,
              outFrame = odomFrame;
 
              tf2::Vector3 c = odomTransform.getOrigin();
-             ROS_INFO("odom   %lf %lf %lf %f",
-                c.x(), c.y(), c.z(), variance);
+             ROS_INFO("odom   %lf %lf %f",
+                c.x(), c.y(), c.z());
          }
     }
     geometry_msgs::TransformStamped ts = toMsg(outPose);
@@ -640,6 +668,10 @@ void Map::publishMarkers()
 
 void Map::publishMarker(Fiducial &fid)
 {
+    if (fid.id == 0) {
+       return;
+    }
+
     fid.lastPublished = ros::Time::now();
 
     // Flattened cube
