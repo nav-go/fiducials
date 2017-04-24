@@ -20,14 +20,13 @@ find_package(OpenCV REQUIRED)
 
 generate_dynamic_reconfigure_options(cfg/DetectorParams.cfg)
 
-catkin_package(INCLUDE_DIRS include
-  DEPENDS OpenCV)
+catkin_package(INCLUDE_DIRS DEPENDS OpenCV)
 
 ###########
 ## Build ##
 ###########
 
-include_directories(${catkin_INCLUDE_DIRS} include)
+include_directories(${catkin_INCLUDE_DIRS})
 include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_executable(aruco_detect src/aruco_detect.cpp)
