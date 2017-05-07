@@ -184,7 +184,7 @@ void Estimation::camInfoCallback(const sensor_msgs::CameraInfo::ConstPtr& msg)
         }
     }
 
-    for (int i=0; i<5; i++) {
+    for (int i=0; i<msg->D.size(); i++) {
         distortionCoeffs.at<double>(0,i) = msg->D[i];
     }
 
