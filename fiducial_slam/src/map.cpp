@@ -54,14 +54,14 @@ static double updateVarianceAlexey(double var1, double var2) {
     return max(1.0 / (1.0/var1 + 1.0/var2), 1e-6);
 }
 
-static bool useAlexey = false;
+static bool averagePoses = false;
 
 // Update the variance of a gaussian that has been combined with another
 // Taking into account the degree of overlap
 static double updateVarianceDavid(const tf2::Vector3 &newMean,
                                   const tf2::Vector3 &mean1, double var1,
                                   const tf2::Vector3 &mean2, double var2) {
-    if (useAlexey) {
+    if (averagePoses) {
        return updateVarianceAlexey(var1, var2);
     }
 
@@ -187,6 +187,7 @@ Map::Map(ros::NodeHandle &nh) : tfBuffer(ros::Duration(30.0)){
 
     nh.param<double>("future_date_transforms", future_date_transforms, 0.1);
     nh.param<bool>("publish_6dof_pose", publish_6dof_pose, false);
+    nh.param<bool>("average_poses", averagePoses, false);
 
     // threshold of object error for using multi-fidicial pose
     // set -ve to never use
