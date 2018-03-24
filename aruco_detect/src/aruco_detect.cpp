@@ -408,7 +408,7 @@ FiducialsNode::FiducialsNode(ros::NodeHandle & nh) : it(nh)
 
     pose_pub = new ros::Publisher(nh.advertise<fiducial_msgs::FiducialTransformArray>("/fiducial_transforms", 1));
 
-    dictionary = aruco::getPredefinedDictionary(dicno);
+    dictionary = aruco::generateCustomDictionary(10,3);
 
     img_sub = it.subscribe("/camera", 1,
                            &FiducialsNode::imageCallback, this);
