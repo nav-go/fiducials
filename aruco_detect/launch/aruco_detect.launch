@@ -6,7 +6,7 @@
   <arg name="transport" default="compressed"/>
   <arg name="fiducial_len" default="0.5334"/>
   <arg name="dictionary" default="7"/>
-  <arg name="do_pose_estimation" default="true"/>
+  <arg name="do_pose_estimation" default="false"/>
 
   <node pkg="aruco_detect" name="aruco_detect"
     type="aruco_detect" output="screen" respawn="false">

@@ -3,14 +3,14 @@
 -->
 <launch>
   <arg name="camera" default="/camera"/>
-  <arg name="map_frame" default="map"/>
-  <arg name="odom_frame" default="odom"/>
-  <arg name="base_frame" default="base_link"/>
+  <arg name="map_frame" default="map_fid"/>
+  <arg name="odom_frame" default=""/>
+  <arg name="base_frame" default="base_link_fid"/>
   <arg name="publish_tf" default="true"/>
   <arg name="future_date_transforms" default="0.0"/>
-  <arg name="publish_6dof_pose" default="false"/>
-  <arg name="fiducial_len" default="0.14"/>
-  <arg name="do_pose_estimation" default="false"/>
+  <arg name="publish_6dof_pose" default="true"/>
+  <arg name="fiducial_len" default="0.5334"/>
+  <arg name="do_pose_estimation" default="true"/>
 
   <node type="fiducial_slam" pkg="fiducial_slam" output="screen" 
     name="fiducial_slam">
@@ -23,6 +23,10 @@
     <param name="do_pose_estimation" value="$(arg do_pose_estimation)"/>
     <param name="fiducial_len" value="$(arg fiducial_len)"/>
     <remap from="/camera_info" to="$(arg camera)/camera_info"/>
+    <remap from="/tf" to="/fid_tf"/>
 
   </node>
+    <node pkg="tf" type="static_transform_publisher" name="baselink2camera" args="0.0833 0 -0.0833 -1.5708 0 -1.5708 base_link_fid camera 100" > 
+      <remap from="tf" to="fid_tf"/> 
+    </node>
 </launch>
