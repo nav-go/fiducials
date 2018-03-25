@@ -80,7 +80,7 @@ int main(int argc, char *argv[]) {
     }
 
     Ptr<aruco::Dictionary> dictionary =
-        aruco::getPredefinedDictionary(aruco::PREDEFINED_DICTIONARY_NAME(dictionaryId));
+        aruco::generateCustomDictionary(10,3);
 
     Mat markerImg;
     aruco::drawMarker(dictionary, markerId, markerSize, markerImg, borderBits);
