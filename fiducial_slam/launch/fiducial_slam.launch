@@ -6,11 +6,11 @@
   <arg name="map_frame" default="map_fid"/>
   <arg name="odom_frame" default=""/>
   <arg name="base_frame" default="base_link_fid"/>
-  <arg name="publish_tf" default="true"/>
+  <arg name="publish_tf" default="false"/>
   <arg name="future_date_transforms" default="0.0"/>
-  <arg name="publish_6dof_pose" default="true"/>
-  <arg name="fiducial_len" default="0.5334"/>
-  <arg name="do_pose_estimation" default="true"/>
+  <arg name="publish_6dof_pose" default="false"/>
+  <arg name="fiducial_len" default="0.55"/>
+  <arg name="do_pose_estimation" default="false"/>
 
   <node type="fiducial_slam" pkg="fiducial_slam" output="screen" 
     name="fiducial_slam">

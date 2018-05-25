@@ -4,9 +4,9 @@
   <arg name="camera" default="/camera"/>
   <arg name="image" default="image_raw"/>
   <arg name="transport" default="compressed"/>
-  <arg name="fiducial_len" default="0.5334"/>
+  <arg name="fiducial_len" default="0.55"/>
   <arg name="dictionary" default="7"/>
-  <arg name="do_pose_estimation" default="false"/>
+  <arg name="do_pose_estimation" default="true"/>
 
   <node pkg="aruco_detect" name="aruco_detect"
     type="aruco_detect" output="screen" respawn="false">

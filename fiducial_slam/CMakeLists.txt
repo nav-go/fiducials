@@ -35,12 +35,37 @@ add_dependencies(fiducial_slam ${${PROJECT_NAME}_EXPORTED_TARGETS}
 
 target_link_libraries(fiducial_slam ${catkin_LIBRARIES} ${OpenCV_LIBS})
 
+add_executable(fiducial_slam0 src/fiducial_slam0.cpp src/estimator.cpp src/map0.cpp)
+add_dependencies(fiducial_slam0 ${${PROJECT_NAME}_EXPORTED_TARGETS}
+                 ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(fiducial_slam0 ${catkin_LIBRARIES} ${OpenCV_LIBS})
+
+
+add_executable(fiducial_slam1 src/fiducial_slam1.cpp src/estimator.cpp src/map1.cpp)
+add_dependencies(fiducial_slam1 ${${PROJECT_NAME}_EXPORTED_TARGETS}
+                 ${catkin_EXPORTED_TARGETS})
+
+target_link_libraries(fiducial_slam1 ${catkin_LIBRARIES} ${OpenCV_LIBS})
 #############
 ## Install ##
 #############
 
 ## Mark executables and/or libraries for installation
 install(TARGETS fiducial_slam
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+## Mark executables and/or libraries for installation
+install(TARGETS fiducial_slam0
+   ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
+   RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}
+)
+
+## Mark executables and/or libraries for installation
+install(TARGETS fiducial_slam1
    ARCHIVE DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    LIBRARY DESTINATION ${CATKIN_PACKAGE_LIB_DESTINATION}
    RUNTIME DESTINATION ${CATKIN_PACKAGE_BIN_DESTINATION}

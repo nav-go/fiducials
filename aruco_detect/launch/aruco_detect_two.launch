@@ -5,7 +5,7 @@
   <arg name="camera0" default="/camera0"/>
   <arg name="image0" default="image_raw"/>
   <arg name="transport0" default="compressed"/>
-  <arg name="fiducial_len0" default="0.5334"/>
+  <arg name="fiducial_len0" default="0.55"/>
   <arg name="dictionary0" default="7"/>
   <arg name="do_pose_estimation0" default="true"/>
 
